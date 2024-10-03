@@ -1,26 +1,23 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request
 import joblib
 
 app = Flask(__name__)
 
-# Load the model and vectorizer
-model = joblib.load('svm_model.pkl')
-vectorizer = joblib.load('tfidf_vectorizer.pkl')
+# Home route
+@app.route('/')
+def home():
+    return render_template('index.html')  # Ensure you have an index.html file in the templates folder
 
+# Add a route for handling the sentiment analysis
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.json
-    review = data.get('review', '')
+    # Handle user input and return the result of the sentiment analysis
+    input_text = request.form['input_text']
+    model = joblib.load('sentiment_model.pkl')
+    vectorizer = joblib.load('vectorizer.pkl')
+    input_vector = vectorizer.transform([input_text])
+    prediction = model.predict(input_vector)
+    return f"Sentiment: {'Positive' if prediction == 1 else 'Negative'}"
 
-    # Transform the input review
-    review_vector = vectorizer.transform([review])
-
-    # Predict sentiment
-    sentiment = model.predict(review_vector)[0]
-    accuracy = model.score(review_vector, [sentiment])  # Not typically done this way, consider fixing
-
-    # Return sentiment and model accuracy
-    return jsonify({'sentiment': sentiment, 'accuracy': accuracy})
-
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=10000)

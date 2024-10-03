@@ -1,23 +1,34 @@
-from flask import Flask, render_template, request
-import joblib
+from flask import Flask, request, jsonify, render_template
+import pickle
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 app = Flask(__name__)
 
-# Home route
+# Load your pre-trained model and vectorizer
+with open('svm_model.pkl', 'rb') as model_file:
+    model = pickle.load(model_file)
+
+with open('tfidf_vectorizer.pkl', 'rb') as vectorizer_file:
+    vectorizer = pickle.load(vectorizer_file)
+
 @app.route('/')
 def home():
-    return render_template('index.html')  # Ensure you have an index.html file in the templates folder
+    return render_template('index.html')
 
-# Add a route for handling the sentiment analysis
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    # Handle user input and return the result of the sentiment analysis
-    input_text = request.form['input_text']
-    model = joblib.load('sentiment_model.pkl')
-    vectorizer = joblib.load('vectorizer.pkl')
-    input_vector = vectorizer.transform([input_text])
-    prediction = model.predict(input_vector)
-    return f"Sentiment: {'Positive' if prediction == 1 else 'Negative'}"
+@app.route('/predict', methods=['POST'])
+def predict():
+    review = request.form['review']
+    # Transform the review into the format your model expects
+    review_vectorized = vectorizer.transform([review])
+    prediction = model.predict(review_vectorized)
+    
+    # Create a response dictionary
+    response = {
+        'review': review,
+        'prediction': 'Positive' if prediction[0] == 1 else 'Negative'
+    }
+    return jsonify(response)
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=10000)
+if __name__ == '__main__':
+    app.run(debug=True)
